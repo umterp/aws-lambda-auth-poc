@@ -1,4 +1,4 @@
-# Welcome to your CDK TypeScript project
+# API Gateway v2 Lambda Authprozer POC
 
 This is a dummy project for CDK development with TypeScript. The purpose of this package is to test the behavior when scaffolding an API Gateway with a lambda consumer and a lambda authorizer via the CDK.
 
