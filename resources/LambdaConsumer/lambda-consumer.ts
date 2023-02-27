@@ -1,4 +1,4 @@
-const consumerhandler = async function (event: any, context: any) {
+export const consumerHandler = async function (event: any, context: any) {
     console.log('Lambda running');
   
     return {
@@ -7,5 +7,3 @@ const consumerhandler = async function (event: any, context: any) {
       body: 'Lambda authorizer working!'
     };
   }
-  
-  module.exports = { consumerhandler }

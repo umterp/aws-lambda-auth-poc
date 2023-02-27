@@ -4,7 +4,8 @@ import { NodejsFunction } from '@aws-cdk/aws-lambda-nodejs';
 import * as path from 'path';
 import { HttpLambdaAuthorizer, HttpLambdaResponseType } from '@aws-cdk/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations';
-import { HttpApi, HttpMethod, CorsHttpMethod } from "@aws-cdk/aws-apigatewayv2";
+import * as apigateway from "@aws-cdk/aws-apigatewayv2";
+import { tagResource } from './tag-resource'
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class HttpAuthPocStack extends cdk.Stack {
@@ -17,45 +18,51 @@ export class HttpAuthPocStack extends cdk.Stack {
   const consumerLambdaId = 'martech-http-api-auth-POC-handler';
   const authHandler = new NodejsFunction(this, authLambdaId, {
     functionName: authLambdaId,
-    runtime: Runtime.NODEJS_16_X,
+    runtime: NODEJS_RUNTIME,
     timeout: cdk.Duration.seconds(10),
     memorySize: 256,
     entry: path.join(__dirname, '..', 'resources', 'LambdaAuthorizer', 'lambda-authorizer.ts'),
-    handler: 'lambda-authorizer.authHandler'
+    handler: 'authHandler'
   }
   );
 
   const lambdaConsumer = new NodejsFunction(this, consumerLambdaId, {
     functionName: consumerLambdaId,
-    runtime: Runtime.NODEJS_16_X,
+    runtime: NODEJS_RUNTIME,
     entry: path.join(__dirname, '..', 'resources', 'LambdaConsumer', 'lambda-consumer.ts'),
-    handler: 'lambda-consumer.consumerhandler'
+    handler: 'consumerHandler'
   }
   );
 
-const lamAuthorizer = new HttpLambdaAuthorizer('TestAuthorizer', authHandler, {
+const lambdaAuthorizer = new HttpLambdaAuthorizer('TestAuthorizer', authHandler, {
   responseTypes: [HttpLambdaResponseType.SIMPLE], // Define if returns simple and/or iam response
+  identitySource: ['$request.header.Authorization']
 });
 
 const apiName = 'martech-http-auth-poc';
-const api = new HttpApi(this, apiName, {
-  createDefaultStage: true,
+const httpApi = new apigateway.HttpApi(this, apiName, {
   apiName: apiName,
   corsPreflight: {
     allowCredentials: false,
     allowHeaders: ["*"],
     allowOrigins: ["https://*"],
     allowMethods: [
-      CorsHttpMethod.POST,
+      apigateway.CorsHttpMethod.GET,
+      apigateway.CorsHttpMethod.HEAD,
+      apigateway.CorsHttpMethod.OPTIONS,
+      apigateway.CorsHttpMethod.POST,
     ]
-  }
+  },
+  defaultAuthorizer: lambdaAuthorizer
 });
 
-  api.addRoutes({
+tagResource(httpApi)
+
+httpApi.addRoutes({
     integration: new HttpLambdaIntegration(consumerLambdaId + '-integ', lambdaConsumer),
     path: '/test',
-    authorizer: lamAuthorizer,
-    methods: [HttpMethod.POST],
+    authorizer: lambdaAuthorizer,
+    methods: [apigateway.HttpMethod.POST],
   }); 
   }
 }
